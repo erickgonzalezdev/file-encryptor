@@ -1,6 +1,6 @@
 {
   "name": "file-encryptor-gcm",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "File encryptor using AES-256-GCM",
   "main": "index.js",
   "scripts": {
