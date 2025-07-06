@@ -1,7 +1,7 @@
 {
-  "name": "file-encryptor",
+  "name": "file-encryptor-gcm",
   "version": "1.0.0",
-  "description": "File encryptor",
+  "description": "File encryptor using AES-256-GCM",
   "main": "index.js",
   "scripts": {
     "lint": "standard --env mocha --fix",
