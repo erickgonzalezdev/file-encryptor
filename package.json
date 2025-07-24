@@ -1,6 +1,6 @@
 {
   "name": "hybrid-encrypt",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "File encryptor using ECIES + AES-256-GCM",
   "main": "index.js",
   "scripts": {
