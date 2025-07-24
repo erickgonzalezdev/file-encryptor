@@ -17,16 +17,19 @@ import { Base64 } from 'js-base64'
  * - Decrypt Encrypted file data.
  */
 
-class WebEncrypt {
-  constructor () {
+class Encrypt {
+  constructor() {
+
+    this.header = 'HENC1'
     this.encrypt = this.encrypt.bind(this)
     this.generateGCMKey = this.generateGCMKey.bind(this)
     this.generateKeyPair = this.generateKeyPair.bind(this)
     this.generateIV = this.generateIV.bind(this)
     this.getFileHash = this.getFileHash.bind(this)
+    this.isEncryptedFile = this.isEncryptedFile.bind(this)
   }
 
-  async encryptAESGCM (data, keyHex) {
+  async encryptAESGCM(data, keyHex) {
     try {
       const hexIv = this.generateIV()
       const iv = this.hexToBuffer(hexIv)
@@ -51,7 +54,7 @@ class WebEncrypt {
     }
   }
 
-  async decryptAESGCM (encryptedData, keyHex, iv) {
+  async decryptAESGCM(encryptedData, keyHex, iv) {
     try {
       const enc = new TextEncoder()
       const dataBuffer = typeof encryptedData === 'string' ? enc.encode(encryptedData) : encryptedData
@@ -71,21 +74,27 @@ class WebEncrypt {
     }
   }
 
-  async encrypt (data, publicKey) {
+  async encrypt(data, publicKey) {
     try {
       if (!data) throw new Error('data to encrypt is required')
       if (!publicKey) throw new Error('publicKey is required')
 
+      const header = new TextEncoder().encode(this.header)
+      console.log('new TextEncoder().encode(this.header)',new TextDecoder().decode(header))
       const gcmKey = this.generateGCMKey()
       const { iv, encryptedData } = await this.encryptAESGCM(data, gcmKey)
       const unitIv = this.hexToBuffer(iv)
       const encodeGCMKey = new TextEncoder().encode(gcmKey)
       const encryptedGCM = ECIES.encrypt(publicKey, encodeGCMKey)
 
-      const mergedData = new Uint8Array(unitIv.byteLength + encryptedData.byteLength + encryptedGCM.byteLength)
-      mergedData.set(unitIv, 0)
-      mergedData.set(new Uint8Array(encryptedData), unitIv.byteLength)
-      mergedData.set(new Uint8Array(encryptedGCM), unitIv.byteLength + encryptedData.byteLength)
+      const mergedData = new Uint8Array(header.byteLength+ unitIv.byteLength + encryptedData.byteLength + encryptedGCM.byteLength)
+
+
+
+      mergedData.set(header, 0);
+      mergedData.set(unitIv, header.byteLength);
+      mergedData.set(new Uint8Array(encryptedData), header.byteLength + unitIv.byteLength);
+      mergedData.set(new Uint8Array(encryptedGCM), header.byteLength + unitIv.byteLength + encryptedData.byteLength);
 
       const base64String = Base64.fromUint8Array(mergedData)
       return base64String
@@ -95,31 +104,33 @@ class WebEncrypt {
     }
   }
 
-  async decrypt (inData, privateKey) {
+  async decrypt(inData, privateKey) {
     try {
-      if (!inData) throw new Error('data to decrypt is required')
-      if (!privateKey) throw new Error('privateKey is required')
+      if (!inData) throw new Error('data to decrypt is required');
+      if (!privateKey) throw new Error('privateKey is required');
 
-      const data = Base64.toUint8Array(inData)
-      const ivLength = 12
-      const gcmEncryptedLength = 161
+      const data = Base64.toUint8Array(inData);
 
-      const iv = data.slice(0, ivLength)
-      const _encryptedGCM = data.slice(data.length - gcmEncryptedLength)
-      const encryptedData = data.slice(ivLength, data.length - gcmEncryptedLength)
+      const headerLength = this.header.length;
+      const ivLength = 12;
+      const gcmEncryptedLength = 161; // ECIES encrypted 32-byte key
 
-      const decryptedGCM = ECIES.decrypt(privateKey, _encryptedGCM)
-      const decodedGCM = new TextDecoder().decode(decryptedGCM)
+      const iv = data.slice(headerLength, headerLength + ivLength);
+      const _encryptedGCM = data.slice(data.length - gcmEncryptedLength);
+      const encryptedData = data.slice(headerLength + ivLength, data.length - gcmEncryptedLength);
 
-      const decryptedData = await this.decryptAESGCM(encryptedData, decodedGCM, iv)
-      return decryptedData
+      const decryptedGCM = ECIES.decrypt(privateKey, _encryptedGCM);
+      const decodedGCM = new TextDecoder().decode(decryptedGCM);
+
+      const decryptedData = await this.decryptAESGCM(encryptedData, decodedGCM, iv);
+      return decryptedData;
     } catch (error) {
       console.error('decrypt error:', error)
       throw error
     }
   }
 
-  generateKeyPair () {
+  generateKeyPair() {
     const keyp = new ECIES.PrivateKey()
     const privateKeyHex = this.bufferToHex(keyp.secret)
     const publicKeyHex = this.bufferToHex(keyp.publicKey.toBytes())
@@ -130,17 +141,17 @@ class WebEncrypt {
     }
   }
 
-  generateGCMKey () {
+  generateGCMKey() {
     const key = crypto.getRandomValues(new Uint8Array(32))
     return this.bufferToHex(key)
   }
 
-  generateIV () {
+  generateIV() {
     const key = crypto.getRandomValues(new Uint8Array(12))
     return this.bufferToHex(key)
   }
 
-  async getFileHash (data) {
+  async getFileHash(data) {
     try {
       const buffer = typeof data === 'string'
         ? new TextEncoder().encode(data)
@@ -154,7 +165,7 @@ class WebEncrypt {
     }
   }
 
-  async importKey (keyHex) {
+  async importKey(keyHex) {
     try {
       const keyBuffer = this.hexToBuffer(keyHex)
       return await crypto.subtle.importKey(
@@ -170,7 +181,7 @@ class WebEncrypt {
     }
   }
 
-  hexToBuffer (hex) {
+  hexToBuffer(hex) {
     const bytes = new Uint8Array(hex.length / 2)
     for (let i = 0; i < hex.length; i += 2) {
       bytes[i / 2] = parseInt(hex.slice(i, i + 2), 16)
@@ -178,13 +189,25 @@ class WebEncrypt {
     return bytes
   }
 
-  bufferToHex (buffer) {
+  bufferToHex(buffer) {
     return [...buffer].map(b => b.toString(16).padStart(2, '0')).join('')
   }
 
-  unit8ToString (unit8) {
+  unit8ToString(unit8) {
     return new TextDecoder().decode(unit8)
+  }
+
+  isEncryptedFile(base64Data) {
+    try {
+      const data = Base64.toUint8Array(base64Data); 
+      const headerBytes = data.slice(0, this.header.length); 
+      const header = new TextDecoder().decode(headerBytes);
+  
+      return header === this.header;
+    } catch (error) {
+      return false;
+    }
   }
 }
 
-export default WebEncrypt
+export default Encrypt
