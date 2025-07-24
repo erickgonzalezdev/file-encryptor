@@ -1,7 +1,7 @@
 {
-  "name": "file-encryptor-gcm",
+  "name": "hybrid-encrypt",
   "version": "1.1.0",
-  "description": "File encryptor using AES-256-GCM",
+  "description": "File encryptor using ECIES + AES-256-GCM",
   "main": "index.js",
   "scripts": {
     "lint": "standard --env mocha --fix",
@@ -11,7 +11,12 @@
   "license": "ISC",
   "type": "module",
   "dependencies": {
-    "crypto": "^1.0.1"
+    "@libp2p/crypto": "^5.1.7",
+    "@noble/curves": "^1.9.2",
+    "crypto": "^1.0.1",
+    "eciesjs": "^0.4.15",
+    "js-base64": "^3.7.7",
+    "multiformats": "^13.3.7"
   },
   "devDependencies": {
     "c8": "^9.1.0",
