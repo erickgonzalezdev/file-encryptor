@@ -30,8 +30,8 @@ class Encrypt {
     this.generateIV = this.generateIV.bind(this)
     this.getFileHash = this.getFileHash.bind(this)
     this.isEncryptedFile = this.isEncryptedFile.bind(this)
-    this.encryptStream = this.encryptReadableStream.bind(this)
-    this.decryptStream = this.decryptReadableStream.bind(this)
+    this.encryptReadableStream = this.encryptReadableStream.bind(this)
+    this.decryptReadableStream = this.decryptReadableStream.bind(this)
   }
 
   async encryptAESGCM (data, keyHex) {
